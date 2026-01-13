@@ -98,3 +98,4 @@ export function ScriptModal({ onClose, onSubmit }: ScriptModalProps) {
         </motion.div>
     );
 }
+

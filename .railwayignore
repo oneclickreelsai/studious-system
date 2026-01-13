@@ -1,0 +1,30 @@
+# Large folders to exclude
+2026-01-11
+output
+assets
+profile
+short-video-maker
+archive
+audiocraft
+SkyReels-V2
+youtube-dl
+cache
+temp
+logs
+data
+
+# Node modules
+node_modules
+frontend/node_modules
+
+# Git
+.git
+
+# Logs
+*.log
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

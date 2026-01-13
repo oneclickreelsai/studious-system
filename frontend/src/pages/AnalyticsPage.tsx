@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Video, Upload, Eye, Clock, RefreshCw, Calendar } from 'lucide-react';
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface AnalyticsData {
     total_videos: number;
@@ -263,3 +263,4 @@ export function AnalyticsPage() {
         </div>
     );
 }
+

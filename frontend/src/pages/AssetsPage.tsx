@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FolderOpen, FileVideo, FileImage, FileAudio, Download, Trash2, Search, Play, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface Asset {
     name: string;
@@ -201,3 +201,4 @@ export function AssetsPage() {
         </div>
     );
 }
+

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Settings, RefreshCw, CheckCircle, XCircle, Key, Facebook, Youtube, Cpu, Music, Bot, Loader2 } from 'lucide-react';
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface ConfigStatus {
     has_openai_key: boolean;
@@ -262,3 +262,4 @@ export function SettingsPage() {
         </div>
     );
 }
+

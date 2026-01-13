@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, Loader2, CheckCircle, XCircle, FileVideo, Instagram, AlertTriangle, ExternalLink } from 'lucide-react';
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 export function InstagramReelUpload() {
     const [file, setFile] = useState<File | null>(null);
@@ -276,3 +276,4 @@ export function InstagramReelUpload() {
         </div>
     );
 }
+

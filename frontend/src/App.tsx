@@ -18,7 +18,7 @@ import { NewsPage } from "./pages/NewsPage";
 import { AssetsPage } from "./pages/AssetsPage";
 import { GoogleDrivePage } from "./pages/GoogleDrivePage";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from './config/api';
 
 interface StatsType {
   status?: string;
@@ -100,3 +100,4 @@ export default function App() {
     </Layout>
   );
 }
+

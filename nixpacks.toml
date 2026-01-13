@@ -1,0 +1,12 @@
+# Python version
+[phases.setup]
+nixPkgs = ["python311", "ffmpeg", "nodejs_20"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[phases.build]
+cmds = ["cd frontend && npm install && npm run build"]
+
+[start]
+cmd = "python -m uvicorn backend.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"

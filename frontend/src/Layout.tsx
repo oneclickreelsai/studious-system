@@ -102,3 +102,4 @@ export function Layout({ children, activeView, setActiveView, isAuthenticated, o
         </div>
     );
 }
+

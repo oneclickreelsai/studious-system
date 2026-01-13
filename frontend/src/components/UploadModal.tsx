@@ -139,3 +139,4 @@ export function UploadModal({ onClose, onSubmit }: UploadModalProps) {
         </motion.div>
     );
 }
+

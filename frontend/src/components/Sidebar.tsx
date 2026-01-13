@@ -182,3 +182,4 @@ export function Sidebar({ activeView, setActiveView, isOpen, setIsOpen, onLogout
         </>
     );
 }
+

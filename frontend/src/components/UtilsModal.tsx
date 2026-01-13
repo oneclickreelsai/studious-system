@@ -35,3 +35,4 @@ export function UtilsModal({ onClose }: UtilsModalProps) {
         </motion.div>
     );
 }
+

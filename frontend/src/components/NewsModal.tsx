@@ -84,3 +84,4 @@ export function NewsModal({ onClose, onSubmit }: NewsModalProps) {
         </motion.div>
     );
 }
+

@@ -5,7 +5,7 @@ import { BatchMode } from "../components/BatchMode";
 
 // Need to define API_URL locally or import from config. 
 // Ideally we should have a config file, but for now matching App.tsx convention.
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 export function CreatePage() {
   const [loading, setLoading] = useState(false);
@@ -97,3 +97,4 @@ function ResultBox({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+

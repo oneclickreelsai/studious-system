@@ -18,7 +18,7 @@ interface HealthResponse {
     services: Record<string, HealthStatus>;
 }
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 export function HealthPage() {
     const [data, setData] = useState<HealthResponse | null>(null);
@@ -146,3 +146,4 @@ export function HealthPage() {
         </div>
     );
 }
+

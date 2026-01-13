@@ -18,7 +18,7 @@ import {
     Play
 } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface SyncStats {
     total_files: number;

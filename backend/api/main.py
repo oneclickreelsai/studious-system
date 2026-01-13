@@ -124,6 +124,8 @@ os.makedirs("output", exist_ok=True)
 app.mount("/output", StaticFiles(directory=PROJECT_ROOT / "output"), name="output")
 app.mount("/assets", StaticFiles(directory=PROJECT_ROOT / "assets"), name="assets")
 
+
+
 # ===== Request Models =====
 class GenerationRequest(BaseModel):
     niche: Optional[str] = None
@@ -232,8 +234,8 @@ async def api_generate_video_from_script(request: ScriptToVideoRequest):
 
 # ===== API Endpoints =====
 
-@app.get("/")
-async def root():
+@app.get("/api/root")
+async def api_root():
     return {
         "name": "OneClick Reels AI API",
         "version": "2.0.0",
@@ -1365,6 +1367,12 @@ async def get_drive_status():
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+# Serve frontend build (for production/Railway deployment)
+# This must be the LAST route to avoid shadowing API endpoints
+FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
 
 # ===== Run Server =====
 if __name__ == "__main__":

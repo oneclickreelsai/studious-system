@@ -191,3 +191,4 @@ function StatusCard({ title, value, icon, color, isOnline }: StatusCardProps) {
         </div>
     );
 }
+

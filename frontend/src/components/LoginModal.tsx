@@ -130,3 +130,4 @@ export function LoginModal({ onClose, onLogin }: LoginModalProps) {
         </motion.div>
     );
 }
+

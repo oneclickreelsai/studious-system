@@ -26,3 +26,4 @@ export function Card({ icon, title, desc, color, iconColor, onClick, disabled }:
         </button>
     )
 }
+

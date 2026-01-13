@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, Clock, Plus, Trash2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface ScheduledPost {
   id: string;
@@ -205,3 +205,4 @@ export function SchedulerPage() {
     </div>
   );
 }
+

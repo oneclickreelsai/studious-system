@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Activity, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 export function SystemHealth() {
     const [status, setStatus] = useState<"loading" | "healthy" | "degraded" | "offline">("loading");
@@ -14,7 +14,7 @@ export function SystemHealth() {
 
     const checkHealth = async () => {
         try {
-            const res = await fetch(`${API_URL}/health`, { 
+            const res = await fetch(`${API_URL}/health`, {
                 method: "GET",
                 signal: AbortSignal.timeout(5000)
             });
@@ -40,7 +40,7 @@ export function SystemHealth() {
     const Icon = config.icon;
 
     return (
-        <button 
+        <button
             onClick={checkHealth}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bg} ${config.color} text-xs font-medium transition-all hover:opacity-80`}
         >
@@ -49,3 +49,4 @@ export function SystemHealth() {
         </button>
     );
 }
+

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, Loader2, Flame, Hash, Clock, BarChart3, RefreshCw, Sparkles, ArrowUp, ArrowDown } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface TrendingTopic {
   topic: string;
@@ -291,3 +291,4 @@ export function TrendAnalyzerPage() {
     </div>
   );
 }
+

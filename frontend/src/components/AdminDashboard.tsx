@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, Youtube, ExternalLink, Server, Cpu, HardDrive, RefreshCw } from 'lucide-react';
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 export function AdminDashboard() {
     const [activeTab, setActiveTab] = useState("overview");
@@ -244,3 +244,4 @@ function StatCard({ title, value, color }: { title: string; value: string; color
         </div>
     );
 }
+

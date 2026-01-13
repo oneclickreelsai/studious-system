@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Upload, Loader2, CheckCircle, AlertCircle, Film, FileVideo, ExternalLink } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface UploadResult {
   success: boolean;
@@ -324,3 +324,4 @@ export function YouTubeUploadPage() {
     </div>
   );
 }
+

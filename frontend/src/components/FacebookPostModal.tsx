@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Sparkles, Facebook, Users, Heart, MessageCircle, Share2, Loader2, RefreshCw, Copy, Check, ExternalLink, Image as ImageIcon, X } from 'lucide-react';
-
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface PageStats {
     success: boolean;
@@ -448,3 +447,4 @@ export function FacebookPostModal() {
         </div>
     );
 }
+

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Newspaper, Loader2, Cpu, DollarSign, Globe, Trophy, Play, Copy, Check, Flame, CheckCircle } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 // Backend response format
 interface NewsResponse {
@@ -263,3 +263,4 @@ export function NewsPage() {
     </div>
   );
 }
+

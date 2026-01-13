@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Download, Loader2, CheckCircle, AlertCircle, Play, Clock, Eye, ThumbsUp, User, Folder } from "lucide-react";
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 interface VideoInfo {
   title: string;
@@ -267,3 +267,4 @@ export function YouTubeDownloaderPage() {
     </div>
   );
 }
+

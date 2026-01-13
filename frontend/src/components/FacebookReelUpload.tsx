@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, Video, Send, Loader2, CheckCircle, XCircle, FileVideo } from 'lucide-react';
 
-const API_URL = "http://localhost:8002";
+import { API_URL } from '../config/api';
 
 export function FacebookReelUpload() {
     const [file, setFile] = useState<File | null>(null);
@@ -173,3 +173,4 @@ export function FacebookReelUpload() {
         </div>
     );
 }
+
