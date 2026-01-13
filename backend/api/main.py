@@ -62,7 +62,8 @@ try:
         post_to_facebook, 
         get_page_stats,
         get_recent_posts,
-        get_topic_suggestions
+        get_topic_suggestions,
+        post_photo_to_facebook
     )
 except ImportError as e:
     logger.warning(f"Facebook poster not loaded: {e}")
@@ -611,25 +612,60 @@ async def api_facebook_preview(request: FacebookPreviewRequest):
         return {"success": False, "error": str(e)}
 
 @app.post("/api/facebook-post")
-async def api_facebook_post(request: FacebookPostRequest):
-    """Post to Facebook."""
+async def api_facebook_post(
+    topic: str = Form(...),
+    niche: str = Form("general"),
+    post_now: bool = Form(True),
+    content: Optional[str] = Form(None),
+    image: UploadFile = File(None),
+    image_path: Optional[str] = Form(None)
+):
+    """Post to Facebook (Text or Image)."""
     if not post_to_facebook:
           raise HTTPException(status_code=500, detail="Module not loaded")
           
     try:
         # If content provided (from preview), use it. Otherwise generate new.
-        content = request.content
-        if not content:
-            gen_res = generate_facebook_post(request.topic, request.niche)
+        msg_content = content
+        if not msg_content:
+            gen_res = generate_facebook_post(topic, niche)
             if not gen_res.get("success"):
                 raise HTTPException(status_code=500, detail=gen_res.get("error"))
-            content = gen_res.get("content")
+            msg_content = gen_res.get("content")
             
-        if request.post_now:
-            result = post_to_facebook(content)
-            return result
+        if post_now:
+            if image:
+                # Handle Image Upload
+                timestamp = int(time.time())
+                filename = f"temp_fb_img_{timestamp}_{image.filename}"
+                temp_path = f"temp/{filename}"
+                os.makedirs("temp", exist_ok=True)
+                
+                with open(temp_path, "wb") as buffer:
+                    import shutil
+                    shutil.copyfileobj(image.file, buffer)
+                    
+                result = post_photo_to_facebook(temp_path, msg_content)
+                
+                # Cleanup
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass
+                return result
+            elif image_path:
+                # Handle Dynamic/Local Image
+                if os.path.exists(image_path):
+                    result = post_photo_to_facebook(image_path, msg_content)
+                    return result
+                else:
+                     raise HTTPException(status_code=400, detail=f"Image path not found: {image_path}")
+            else:
+                # Text Only
+                result = post_to_facebook(msg_content)
+                return result
         else:
-            return {"success": True, "posted": False, "content": content}
+            return {"success": True, "posted": False, "content": msg_content}
             
     except Exception as e:
         logger.error(f"Facebook post error: {e}")
