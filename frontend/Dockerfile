@@ -1,6 +1,6 @@
 # Build stage - OneClick Reels AI Frontend
-# Cache bust: 2026-01-13
-FROM node:18-alpine as build
+# Cache bust: 2026-01-13-v2
+FROM node:20-alpine as build
 
 WORKDIR /app
 
