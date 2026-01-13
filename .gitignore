@@ -1,0 +1,88 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+.cache/
+frontend/dist/
+frontend/node_modules/
+
+# Environment
+.env
+config.env
+*.env.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Project specific - Large folders
+output/
+logs/
+cache/
+temp/
+profile/
+short-video-maker/
+SkyReels-V2/
+youtube-dl/
+audiocraft/
+
+# Project specific - Generated files
+*.log
+*.db
+*.sqlite
+data/database.json
+sync_log.json
+
+# Credentials & Tokens
+*_token.json
+credentials.json
+service_account.json
+oneclickreelsai-*.json
+drive_oauth_token.json
+oauth_test.txt
+drive_test.txt
+
+# Archives & Backups
+*.zip
+*.tar.gz
+2026-*/
+archive/
+.backup_manifest.json
+
+# Test files
+test_*.py
+*_test.py
+tests/__pycache__/
+
+# Meta AI downloads
+meta_downloader.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~

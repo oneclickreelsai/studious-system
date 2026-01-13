@@ -1,0 +1,76 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-python-deps:
+    name: Update Python Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install pip-tools
+      run: pip install pip-tools
+    
+    - name: Update dependencies
+      run: |
+        pip-compile --upgrade requirements.txt
+    
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update Python dependencies'
+        title: 'Update Python Dependencies'
+        body: |
+          Automated dependency update
+          
+          - Updated Python packages to latest versions
+          - Please review and test before merging
+        branch: deps/python-updates
+        delete-branch: true
+
+  update-npm-deps:
+    name: Update NPM Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Update dependencies
+      working-directory: ./frontend
+      run: |
+        npm update
+        npm audit fix
+    
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update NPM dependencies'
+        title: 'Update NPM Dependencies'
+        body: |
+          Automated dependency update
+          
+          - Updated NPM packages to latest versions
+          - Ran npm audit fix
+          - Please review and test before merging
+        branch: deps/npm-updates
+        delete-branch: true
