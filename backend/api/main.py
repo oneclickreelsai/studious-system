@@ -248,7 +248,8 @@ async def health_check():
         "timestamp": time.time(),
         "services": {
             "api": "running",
-            "openai": "configured" if os.getenv("OPENAI_API_KEY") else "not configured",
+            "perplexity": "configured" if os.getenv("PERPLEXITY_API_KEY") else "not configured",
+            "openai": "configured" if os.getenv("OPENAI_API_KEY") else "not configured (fallback)",
             "youtube": "configured" if os.getenv("YOUTUBE_CLIENT_ID") else "not configured",
             "pexels": "configured" if os.getenv("PEXELS_API_KEY") else "not configured"
         }

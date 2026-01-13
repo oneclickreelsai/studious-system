@@ -131,17 +131,11 @@ class Settings:
     
     def validate_required_settings(self):
         """Validate that required settings are present."""
-        required_settings = [
-            ("OPENAI_API_KEY", self.openai_api_key),
-        ]
+        # At least one AI provider must be configured (Perplexity is primary, OpenAI is fallback)
+        has_ai_provider = bool(self.perplexity_api_key or self.openai_api_key)
         
-        missing_settings = []
-        for setting_name, setting_value in required_settings:
-            if not setting_value:
-                missing_settings.append(setting_name)
-        
-        if missing_settings:
-            raise ValueError(f"Missing required settings: {', '.join(missing_settings)}")
+        if not has_ai_provider:
+            raise ValueError("Missing required settings: Either PERPLEXITY_API_KEY or OPENAI_API_KEY must be set")
     
     def get_all_settings(self) -> Dict[str, Any]:
         """Get all settings as a dictionary (excluding sensitive data)."""
