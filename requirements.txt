@@ -44,6 +44,8 @@ rich>=13.0.0
 # === Utilities ===
 tqdm>=4.66.0
 tenacity>=8.2.0
+nest-asyncio>=1.5.0
+yt-dlp>=2024.1.0
 
 # === Development (Optional) ===
 # pytest>=7.4.0
