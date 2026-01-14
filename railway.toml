@@ -8,6 +8,6 @@ restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
 
 [healthCheck]
-path = "/health"
+path = "/api/health"
 timeout = 100
 interval = 10
