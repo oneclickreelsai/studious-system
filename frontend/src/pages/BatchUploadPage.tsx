@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
-  X,
   Play,
   Trash2,
   Sparkles,
@@ -52,7 +51,6 @@ export function BatchUploadPage() {
   const [uploadYoutube, setUploadYoutube] = useState(true);
   const [uploadFacebook, setUploadFacebook] = useState(false);
   const [uploadInstagram, setUploadInstagram] = useState(false);
-  const [autoGenerate, setAutoGenerate] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [currentUploadIndex, setCurrentUploadIndex] = useState(-1);
@@ -167,7 +165,7 @@ export function BatchUploadPage() {
       updateVideo(video.id, { progress: 80 });
 
       if (res.ok) {
-        const data = await res.json();
+        await res.json();
         updateVideo(video.id, {
           status: "success",
           progress: 100,
@@ -391,7 +389,7 @@ export function BatchUploadPage() {
             </div>
 
             <AnimatePresence>
-              {videos.map((video, index) => (
+              {videos.map((video) => (
                 <motion.div
                   key={video.id}
                   initial={{ opacity: 0, y: 20 }}
