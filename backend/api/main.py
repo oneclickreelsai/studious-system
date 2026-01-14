@@ -63,10 +63,12 @@ try:
         get_page_stats,
         get_recent_posts,
         get_topic_suggestions,
-        post_photo_to_facebook
+        post_photo_to_facebook,
+        post_video_to_facebook
     )
 except ImportError as e:
     logger.warning(f"Facebook poster not loaded: {e}")
+    post_video_to_facebook = None
 
 try:
     from backend.core.ai_engine.news_agent import get_trending_news
@@ -356,13 +358,19 @@ async def api_generate_from_script(request: GenerateFromScriptRequest):
         
         # 1. Voiceover - run in thread pool to avoid async conflicts
         logger.info("Generating voiceover...")
+        timestamp = int(time.time())
+        voiceover_path = f"output/voiceover_{timestamp}.mp3"
+        
         voiceover = await loop.run_in_executor(
             None, 
-            lambda: generate_voiceover(request.script, niche=request.niche)
+            lambda: generate_voiceover(request.script, output_file=voiceover_path, niche=request.niche)
         )
         
-        if not voiceover:
+        if not voiceover or not os.path.exists(voiceover):
+            logger.error(f"Voiceover generation failed - file not found: {voiceover}")
             raise HTTPException(status_code=500, detail="Voiceover generation failed")
+        
+        logger.info(f"Voiceover generated: {voiceover}, size: {os.path.getsize(voiceover)} bytes")
         
         # 2. Background Video
         logger.info(f"Searching background for: {request.topic}")
@@ -377,9 +385,11 @@ async def api_generate_from_script(request: GenerateFromScriptRequest):
         if not video_path:
             raise HTTPException(status_code=500, detail="Could not find background video")
         
+        logger.info(f"Background video found: {video_path}")
+        
         # 3. Build Video
-        logger.info("Building video...")
-        output_filename = f"reel_{int(time.time())}.mp4"
+        logger.info("Building video with audio...")
+        output_filename = f"reel_{timestamp}.mp4"
         output_path = f"output/{output_filename}"
         
         def build_task():
@@ -394,12 +404,18 @@ async def api_generate_from_script(request: GenerateFromScriptRequest):
             
         final_video_path = await loop.run_in_executor(None, build_task)
         
+        logger.info(f"Video built: {final_video_path}, size: {os.path.getsize(final_video_path)} bytes")
+        
         return {
             "success": True, 
             "video_path": f"/output/{output_filename}",
             "filename": output_filename,
             "full_path": str(final_video_path)
         }
+        
+    except Exception as e:
+        logger.error(f"Generation from script failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
         
     except Exception as e:
         logger.error(f"Generation from script failed: {e}")
@@ -468,6 +484,98 @@ async def api_meta_to_youtube(request: MetaToYouTubeRequest):
         
     except Exception as e:
         logger.error(f"Meta to YouTube error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class MetaToSocialRequest(BaseModel):
+    url: str
+    custom_title: Optional[str] = None
+    custom_description: Optional[str] = None
+    analyze_content: bool = True
+    upload_youtube: bool = True
+    upload_facebook: bool = True
+    upload_instagram: bool = False
+
+
+@app.post("/api/meta-to-social")
+async def api_meta_to_social(request: MetaToSocialRequest):
+    """Download Meta AI video and upload to multiple social platforms."""
+    try:
+        from backend.core.video_engine.meta_to_youtube import meta_ai_to_youtube
+        from backend.core.ai_engine.facebook_poster import post_video_to_facebook
+        
+        logger.info(f"Meta AI to Social pipeline: {request.url}")
+        logger.info(f"Platforms: YouTube={request.upload_youtube}, Facebook={request.upload_facebook}, Instagram={request.upload_instagram}")
+        
+        results = {"success": True}
+        video_path = None
+        title = request.custom_title
+        description = request.custom_description
+        
+        # First, download and process the video
+        if request.upload_youtube:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            
+            def run_youtube_pipeline():
+                return meta_ai_to_youtube(
+                    request.url,
+                    custom_title=request.custom_title,
+                    custom_desc=request.custom_description,
+                    analyze_content=request.analyze_content
+                )
+            
+            yt_result = await loop.run_in_executor(None, run_youtube_pipeline)
+            results["youtube"] = {
+                "success": yt_result.get("success", False),
+                "video_id": yt_result.get("youtube_id"),
+                "video_url": yt_result.get("youtube_url"),
+                "title": yt_result.get("title"),
+                "error": yt_result.get("error")
+            }
+            video_path = yt_result.get("video_path")  # Fixed: was "local_path"
+            title = title or yt_result.get("title", "")
+            description = description or yt_result.get("description", "")
+            logger.info(f"YouTube upload done. Video path: {video_path}")
+        else:
+            # Just download without YouTube upload
+            if download_meta_ai_content:
+                logger.info("Downloading video without YouTube upload...")
+                download_result = download_meta_ai_content(request.url)
+                if download_result.get("success"):
+                    video_path = download_result.get("file_path")
+                    logger.info(f"Downloaded video to: {video_path}")
+        
+        # Upload to Facebook (using VIDEO endpoint, not photo)
+        if request.upload_facebook and video_path:
+            try:
+                logger.info(f"Starting Facebook video upload: {video_path}")
+                fb_message = f"{title}\n\n{description}" if title else description or "Check out this video!"
+                fb_result = post_video_to_facebook(video_path, fb_message, title=title)
+                results["facebook"] = {
+                    "success": fb_result.get("success", False),
+                    "post_id": fb_result.get("post_id"),
+                    "video_id": fb_result.get("video_id"),
+                    "error": fb_result.get("error")
+                }
+                logger.info(f"Facebook upload result: {results['facebook']}")
+            except Exception as fb_err:
+                logger.error(f"Facebook upload error: {fb_err}")
+                results["facebook"] = {"success": False, "error": str(fb_err)}
+        elif request.upload_facebook and not video_path:
+            results["facebook"] = {"success": False, "error": "No video file available for upload"}
+        
+        # Upload to Instagram (placeholder - requires Instagram Graph API setup)
+        if request.upload_instagram and video_path:
+            results["instagram"] = {
+                "success": False,
+                "error": "Instagram Reels API requires Business Account setup"
+            }
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Meta to Social error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/analyze-video")

@@ -215,6 +215,7 @@ class MediaCapture:
         self.audios: List[Dict] = []
         self.seen_urls: set = set()
         self.prompt_text: str = ""
+        self.music_info: str = ""
         
     async def handle_response(self, response):
         try:
@@ -225,7 +226,10 @@ class MediaCapture:
             
             if 'video' in content_type or '.mp4' in url.lower():
                 await self._capture_video(response, url)
-            elif 'audio' in content_type or any(ext in url.lower() for ext in ['.mp3', '.wav', '.m4a']):
+            elif 'audio' in content_type or any(ext in url.lower() for ext in ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.webm']):
+                await self._capture_audio(response, url)
+            # Also check for music/audio in Facebook CDN URLs
+            elif 'fbcdn' in url and ('audio' in url.lower() or 'music' in url.lower() or 'sound' in url.lower()):
                 await self._capture_audio(response, url)
             elif 'image' in content_type and 'scontent' in url:
                 await self._capture_frame(response, url)
@@ -251,11 +255,19 @@ class MediaCapture:
             body = await response.body()
             if len(body) > Config.MIN_AUDIO_SIZE:
                 self.seen_urls.add(url)
-                audio_path = os.path.join(self.output_dir, "audio.mp3")
+                # Determine extension from URL or content-type
+                ext = '.mp3'
+                if '.m4a' in url.lower():
+                    ext = '.m4a'
+                elif '.aac' in url.lower():
+                    ext = '.aac'
+                elif '.wav' in url.lower():
+                    ext = '.wav'
+                audio_path = os.path.join(self.output_dir, f"audio{ext}")
                 with open(audio_path, 'wb') as f:
                     f.write(body)
                 self.audios.append({"path": audio_path, "size": len(body)})
-                logger.info(f"[AUDIO] Captured: {len(body) / 1024:.1f} KB")
+                logger.info(f"[AUDIO] Captured: {len(body) / 1024:.1f} KB from {url[:80]}...")
         except:
             pass
     
@@ -314,6 +326,9 @@ async def extract_meta_content(post_url: str, output_dir: str) -> Optional[Dict]
             if media.prompt_text:
                 logger.info(f"[OK] Prompt found")
             
+            # Extract music info
+            media.music_info = await extract_music_info(page)
+            
             # Click video if present
             try:
                 video = await page.query_selector('video')
@@ -352,6 +367,84 @@ async def extract_prompt(page) -> str:
             continue
     return ""
 
+async def extract_music_info(page) -> Optional[str]:
+    """Extract music/song name from Meta AI post."""
+    try:
+        # Look for music info - usually shows as "Song · Artist" format
+        selectors = [
+            'span[dir="auto"]',
+            'div[dir="auto"]', 
+        ]
+        
+        for selector in selectors:
+            elements = await page.query_selector_all(selector)
+            for el in elements:
+                text = await el.inner_text()
+                if text:
+                    text = text.strip()
+                    # Look for music patterns: "Song · Artist" format
+                    if '·' in text and len(text) < 200 and len(text) > 5:
+                        # Could be "Song · Artist" format
+                        if not any(x in text.lower() for x in ['sign in', 'create', 'explore', 'http', 'followers', 'prompt']):
+                            logger.info(f"[MUSIC] Found: {text}")
+                            return text
+        return None
+    except Exception as e:
+        logger.warning(f"[!] Music extraction failed: {e}")
+        return None
+
+def download_music_from_youtube(song_query: str, output_dir: str) -> Optional[str]:
+    """Download music from YouTube based on song name."""
+    if not YTDLP_AVAILABLE:
+        return None
+    
+    try:
+        logger.info(f"[*] Searching YouTube for music: {song_query}")
+        
+        # Search and download audio only
+        output_template = os.path.join(output_dir, "music.%(ext)s")
+        cmd = [
+            'yt-dlp',
+            f'ytsearch1:{song_query}',  # Search YouTube, get first result
+            '-x',  # Extract audio
+            '--audio-format', 'mp3',
+            '--audio-quality', '192K',
+            '-o', output_template,
+            '--no-playlist',
+            '-q'
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        
+        # Find the downloaded file
+        music_path = os.path.join(output_dir, "music.mp3")
+        if os.path.exists(music_path):
+            logger.info(f"[OK] Music downloaded: {music_path}")
+            return music_path
+        
+        # Check for other extensions
+        for ext in ['m4a', 'webm', 'opus', 'mp3']:
+            check_path = os.path.join(output_dir, f"music.{ext}")
+            if os.path.exists(check_path):
+                if ext != 'mp3':
+                    # Convert to mp3
+                    mp3_path = os.path.join(output_dir, "music.mp3")
+                    convert_cmd = [FFMPEG_PATH or 'ffmpeg', '-y', '-i', check_path, '-acodec', 'libmp3lame', '-b:a', '192k', mp3_path]
+                    subprocess.run(convert_cmd, capture_output=True, timeout=60)
+                    if os.path.exists(mp3_path):
+                        os.remove(check_path)
+                        logger.info(f"[OK] Music converted: {mp3_path}")
+                        return mp3_path
+                else:
+                    return check_path
+        
+        logger.warning("[!] Music download failed - file not found")
+        return None
+        
+    except Exception as e:
+        logger.error(f"[X] Music download error: {e}")
+        return None
+
 def process_results(media: MediaCapture, output_dir: str) -> Dict:
     # Save prompt
     if media.prompt_text:
@@ -361,7 +454,8 @@ def process_results(media: MediaCapture, output_dir: str) -> Dict:
     result = {
         "prompt": media.prompt_text,
         "prompt_file": os.path.join(output_dir, "prompt.txt") if media.prompt_text else None,
-        "audio": media.audios[0] if media.audios else None
+        "audio": media.audios[0] if media.audios else None,
+        "music_info": media.music_info if hasattr(media, 'music_info') else None
     }
     
     best_video = media.get_best_video()
@@ -402,11 +496,22 @@ def stitch_frames_to_video(frames_dir: str, output_path: str, fps: int = 12) -> 
         pass
     return None
 
-def merge_audio_video(video_path: str, audio_path: str, output_path: str) -> Optional[str]:
+def merge_audio_video(video_path: str, audio_path: str, output_path: str, audio_start_sec: float = 0) -> Optional[str]:
+    """Merge video with audio, optionally starting audio from a specific timestamp."""
     if not FFMPEG_AVAILABLE:
         return None
-    cmd = [FFMPEG_PATH, '-y', '-i', video_path, '-i', audio_path, '-c:v', 'copy', '-c:a', 'aac',
-           '-b:a', Config.AUDIO_BITRATE, '-shortest', output_path]
+    
+    # Build command - if audio_start_sec > 0, skip to that point in audio (for hook/chorus)
+    cmd = [FFMPEG_PATH, '-y', '-i', video_path]
+    
+    if audio_start_sec > 0:
+        # Start audio from specified timestamp (skip intro, get to hook)
+        cmd.extend(['-ss', str(audio_start_sec), '-i', audio_path])
+    else:
+        cmd.extend(['-i', audio_path])
+    
+    cmd.extend(['-c:v', 'copy', '-c:a', 'aac', '-b:a', Config.AUDIO_BITRATE, '-shortest', output_path])
+    
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         if result.returncode == 0:
@@ -414,6 +519,36 @@ def merge_audio_video(video_path: str, audio_path: str, output_path: str) -> Opt
     except:
         pass
     return None
+
+
+def get_audio_duration(audio_path: str) -> float:
+    """Get audio duration in seconds."""
+    if not FFPROBE_PATH or not os.path.exists(audio_path):
+        return 0
+    try:
+        cmd = [FFPROBE_PATH, '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', audio_path]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            return float(result.stdout.strip())
+    except:
+        pass
+    return 0
+
+
+def estimate_hook_timestamp(audio_duration: float) -> float:
+    """
+    Estimate where the hook/chorus starts in a song.
+    Most pop songs: Intro(0-15s) -> Verse(15-45s) -> Pre-chorus(45-60s) -> CHORUS(60-90s)
+    For shorter songs, scale proportionally.
+    """
+    if audio_duration <= 30:
+        return 0  # Short clip, use from start
+    elif audio_duration <= 120:
+        # Short song - hook usually around 30-40% mark
+        return audio_duration * 0.35
+    else:
+        # Standard song (3-4 min) - hook usually around 50-70 seconds
+        return min(55, audio_duration * 0.25)  # ~55 seconds or 25% in
 
 def download_meta_ai_content(url: str, output_dir: str = None) -> Dict:
     """Download Meta AI content (video, animation, prompt)."""
@@ -432,8 +567,9 @@ def download_meta_ai_content(url: str, output_dir: str = None) -> Dict:
         logger.info("[*] Trying yt-dlp...")
         ytdlp_result = download_with_ytdlp(url, output_dir)
         if ytdlp_result:
-            # Also extract prompt using playwright
+            # Also extract prompt and possibly audio using playwright
             prompt = ""
+            captured_audio = None
             try:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
@@ -441,8 +577,38 @@ def download_meta_ai_content(url: str, output_dir: str = None) -> Dict:
                 loop.close()
                 if result:
                     prompt = result.get("prompt", "")
+                    captured_audio = result.get("audio")
             except:
                 pass
+            
+            final_path = ytdlp_result["path"]
+            final_size = ytdlp_result["size"]
+            
+            # If yt-dlp video has no audio but playwright captured audio, merge them
+            if not ytdlp_result.get("has_audio") and captured_audio and os.path.exists(captured_audio.get("path", "")):
+                logger.info("[*] Merging captured audio with video...")
+                merged_path = os.path.join(output_dir, "video_merged.mp4")
+                if merge_audio_video(final_path, captured_audio["path"], merged_path):
+                    final_path = merged_path
+                    final_size = os.path.getsize(merged_path)
+                    logger.info("[OK] Audio merged successfully!")
+            
+            # If still no audio, try to download music from YouTube based on music info
+            music_info = result.get("music_info") if result else None
+            if not ytdlp_result.get("has_audio") and not captured_audio and music_info:
+                logger.info(f"[*] No audio captured, trying to download music: {music_info}")
+                music_path = download_music_from_youtube(music_info, output_dir)
+                if music_path and os.path.exists(music_path):
+                    # Calculate hook timestamp - skip intro, get to the catchy part
+                    audio_duration = get_audio_duration(music_path)
+                    hook_start = estimate_hook_timestamp(audio_duration)
+                    logger.info(f"[*] Audio duration: {audio_duration:.1f}s, starting from hook at {hook_start:.1f}s")
+                    
+                    merged_path = os.path.join(output_dir, "video_with_music.mp4")
+                    if merge_audio_video(final_path, music_path, merged_path, audio_start_sec=hook_start):
+                        final_path = merged_path
+                        final_size = os.path.getsize(merged_path)
+                        logger.info("[OK] Music merged with hook section!")
             
             return {
                 "success": True,
@@ -450,11 +616,12 @@ def download_meta_ai_content(url: str, output_dir: str = None) -> Dict:
                 "output_folder": output_dir,
                 "prompt": prompt,
                 "prompt_file": os.path.join(output_dir, "prompt.txt") if prompt else None,
-                "audio": None,
+                "audio": captured_audio,
+                "music_info": music_info,
                 "type": "video",
-                "file_path": ytdlp_result["path"],
-                "file_size": ytdlp_result["size"],
-                "filename": os.path.basename(ytdlp_result["path"]),
+                "file_path": final_path,
+                "file_size": final_size,
+                "filename": os.path.basename(final_path),
                 "message": "Video downloaded successfully (yt-dlp)"
             }
     

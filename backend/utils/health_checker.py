@@ -19,31 +19,70 @@ class HealthChecker:
         self.last_check = {}
         self.check_interval = 300  # 5 minutes
     
-    def check_openai(self) -> Dict[str, Any]:
-        """Check OpenAI API health."""
+    def check_perplexity(self) -> Dict[str, Any]:
+        """Check Perplexity API health (PRIMARY AI)."""
         try:
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            api_key = os.getenv("PERPLEXITY_API_KEY")
+            if not api_key:
+                return {
+                    "service": "perplexity",
+                    "status": "unhealthy",
+                    "error": "No API key configured",
+                    "details": "PERPLEXITY_API_KEY not set"
+                }
             
-            # Simple test request
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": "Hello"}],
-                max_tokens=5,
-                timeout=10
+            client = OpenAI(
+                base_url="https://api.perplexity.ai",
+                api_key=api_key,
+                timeout=10.0
             )
             
+            response = client.chat.completions.create(
+                model="sonar",
+                messages=[{"role": "user", "content": "Hi"}],
+                max_tokens=5
+            )
+            
+            return {
+                "service": "perplexity",
+                "status": "healthy",
+                "response_time": time.time(),
+                "details": "API responding normally (PRIMARY)"
+            }
+        except Exception as e:
+            return {
+                "service": "perplexity",
+                "status": "unhealthy",
+                "error": str(e),
+                "details": "API request failed"
+            }
+    
+    def check_openai(self) -> Dict[str, Any]:
+        """Check OpenAI API health (FALLBACK only) - just verify key exists, don't call API."""
+        try:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                return {
+                    "service": "openai",
+                    "status": "unhealthy",
+                    "error": "No API key configured",
+                    "details": "OPENAI_API_KEY not set (fallback)"
+                }
+            
+            # Don't make actual API call - OpenAI has strict rate limits
+            # Just verify the key is configured
             return {
                 "service": "openai",
                 "status": "healthy",
                 "response_time": time.time(),
-                "details": "API responding normally"
+                "details": "API key configured (FALLBACK - not tested to avoid rate limits)"
             }
         except Exception as e:
             return {
                 "service": "openai",
                 "status": "unhealthy",
                 "error": str(e),
-                "details": "API request failed"
+                "details": "Configuration check failed (fallback)"
             }
     
     def check_youtube(self) -> Dict[str, Any]:
@@ -209,8 +248,9 @@ class HealthChecker:
             "services": {}
         }
         
-        # Check each service
+        # Check each service - Perplexity FIRST (primary)
         services = [
+            ("perplexity", self.check_perplexity),
             ("openai", self.check_openai),
             ("youtube", self.check_youtube),
             ("pexels", self.check_pexels),

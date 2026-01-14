@@ -31,6 +31,8 @@ load_dotenv(PROJECT_ROOT / "config.env")
 
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
+PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar-pro")
 
 
 def find_ffmpeg() -> Optional[str]:
@@ -135,8 +137,8 @@ def analyze_video_mood(video_path: str, prompt: str = "") -> Dict:
     elif any(kw in prompt_lower for kw in low_energy):
         mood["energy"] = "low"
     
-    # Try AI analysis if OpenAI available
-    if OPENAI_API_KEY and prompt:
+    # Try AI analysis - Perplexity first, OpenAI fallback
+    if (PERPLEXITY_API_KEY or OPENAI_API_KEY) and prompt:
         try:
             mood = _analyze_with_ai(prompt, mood)
         except Exception as e:
@@ -147,13 +149,25 @@ def analyze_video_mood(video_path: str, prompt: str = "") -> Dict:
 
 
 def _analyze_with_ai(prompt: str, default_mood: Dict) -> Dict:
-    """Use OpenAI to analyze mood from prompt."""
+    """Use Perplexity (primary) or OpenAI (fallback) to analyze mood from prompt."""
     import openai
     
-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    # Perplexity first
+    if PERPLEXITY_API_KEY:
+        client = openai.OpenAI(
+            base_url="https://api.perplexity.ai",
+            api_key=PERPLEXITY_API_KEY,
+            timeout=30.0
+        )
+        model = PERPLEXITY_MODEL
+    elif OPENAI_API_KEY:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        model = "gpt-4o-mini"
+    else:
+        return default_mood
     
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[{
             "role": "system",
             "content": "Analyze the video prompt and return JSON with: mood (happy/chill/energetic/dramatic/romantic/mysterious/funny/inspirational), energy (low/medium/high), keywords (3 music search terms). Only return valid JSON."

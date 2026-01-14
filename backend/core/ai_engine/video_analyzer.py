@@ -12,7 +12,9 @@ from dotenv import load_dotenv
 load_dotenv("config.env")
 logger = logging.getLogger(__name__)
 
+# OpenAI is used for vision (Perplexity doesn't have vision API)
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+PERPLEXITY_KEY = os.getenv("PERPLEXITY_API_KEY")
 
 def find_ffmpeg():
     import shutil

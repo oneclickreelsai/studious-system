@@ -36,7 +36,7 @@ export function AudioStudioPage() {
         if (!searchQuery.trim()) return;
         setSearching(true);
         try {
-            const res = await fetch(`http://localhost:8002/api/audio/search?q=${encodeURIComponent(searchQuery)}`);
+            const res = await fetch(`http://localhost:8000/api/audio/search?q=${encodeURIComponent(searchQuery)}`);
             const data = await res.json();
             if (data.success) setSearchResults(data.results);
         } catch (e) {
@@ -49,7 +49,7 @@ export function AudioStudioPage() {
     const handleDownload = async (id: string) => {
         setDownloadingId(id);
         try {
-            const res = await fetch("http://localhost:8002/api/audio/download", {
+            const res = await fetch("http://localhost:8000/api/audio/download", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ video_id: id })
@@ -75,7 +75,7 @@ export function AudioStudioPage() {
         setResult(null);
 
         try {
-            const res = await fetch("http://localhost:8002/api/add-music", {
+            const res = await fetch("http://localhost:8000/api/add-music", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -112,7 +112,7 @@ export function AudioStudioPage() {
         setIsGenerating(true);
         setGeneratedAudio(null);
         try {
-            const res = await fetch("http://localhost:8002/api/audio/generate", {
+            const res = await fetch("http://localhost:8000/api/audio/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ prompt: aiPrompt, duration: aiDuration })
@@ -440,10 +440,10 @@ export function AudioStudioPage() {
                                         <CheckCircle className="w-4 h-4" /> Generation Complete
                                     </h4>
                                     <div className="flex flex-col gap-3">
-                                        <audio controls src={`http://localhost:8002${generatedAudio?.url}`} className="w-full" />
+                                        <audio controls src={`http://localhost:8000${generatedAudio?.url}`} className="w-full" />
                                         <div className="flex gap-3">
                                             <a
-                                                href={`http://localhost:8002${generatedAudio?.url}`}
+                                                href={`http://localhost:8000${generatedAudio?.url}`}
                                                 download
                                                 className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-center text-white transition-colors"
                                             >

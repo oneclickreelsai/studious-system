@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Bot, Download, CheckCircle, AlertCircle, Loader2, Play, Film, Image, FileText, Music, Youtube, Sparkles } from "lucide-react";
+import { Bot, Download, CheckCircle, AlertCircle, Loader2, Play, Film, Image, FileText, Youtube, Sparkles, Facebook, Instagram } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface DownloadResult {
@@ -19,11 +18,11 @@ interface DownloadResult {
     audio?: { type: string; path: string; size: number };
 }
 
-interface YouTubeUploadResult {
+interface UploadResult {
     success: boolean;
-    video_id?: string;
-    video_url?: string;
-    title?: string;
+    youtube?: { success: boolean; video_id?: string; video_url?: string; title?: string; error?: string };
+    facebook?: { success: boolean; post_id?: string; error?: string };
+    instagram?: { success: boolean; media_id?: string; error?: string };
     error?: string;
 }
 
@@ -33,10 +32,15 @@ export function MetaAIDownloader() {
     const [result, setResult] = useState<DownloadResult | null>(null);
     const [error, setError] = useState("");
 
-    // YouTube re-engineer state
-    const [youtubeUploading, setYoutubeUploading] = useState(false);
-    const [youtubeProgress, setYoutubeProgress] = useState("");
-    const [youtubeResult, setYoutubeResult] = useState<YouTubeUploadResult | null>(null);
+    // Upload options
+    const [uploadYoutube, setUploadYoutube] = useState(true);
+    const [uploadFacebook, setUploadFacebook] = useState(true);
+    const [uploadInstagram, setUploadInstagram] = useState(false);
+
+    // Upload state
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState("");
+    const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
     const handleDownload = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -47,7 +51,7 @@ export function MetaAIDownloader() {
         setResult(null);
 
         try {
-            const res = await fetch("http://localhost:8002/api/download-meta-video", {
+            const res = await fetch("http://localhost:8000/api/download-meta-video", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ url }),
@@ -67,51 +71,52 @@ export function MetaAIDownloader() {
         }
     };
 
-    const handleReEngineerToYoutube = async () => {
+    const handleReEngineerAndUpload = async () => {
         if (!url.trim()) return;
+        if (!uploadYoutube && !uploadFacebook && !uploadInstagram) {
+            setError("Please select at least one platform to upload");
+            return;
+        }
 
-        setYoutubeUploading(true);
-        setYoutubeProgress("Starting pipeline...");
-        setYoutubeResult(null);
+        setUploading(true);
+        setUploadProgress("Starting pipeline...");
+        setUploadResult(null);
 
         try {
-            setYoutubeProgress("Downloading video from Meta AI...");
+            setUploadProgress("Downloading video from Meta AI...");
 
-            const res = await fetch("http://localhost:8002/api/meta-to-youtube", {
+            const res = await fetch("http://localhost:8000/api/meta-to-social", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     url,
                     analyze_content: true,
-                    upload: true
+                    upload_youtube: uploadYoutube,
+                    upload_facebook: uploadFacebook,
+                    upload_instagram: uploadInstagram
                 }),
             });
 
-            setYoutubeProgress("Analyzing content & generating metadata...");
+            setUploadProgress("Analyzing content & uploading...");
 
             const data = await res.json();
 
             if (res.ok && data.success) {
-                setYoutubeResult({
-                    success: true,
-                    video_id: data.video_id,
-                    video_url: data.video_url,
-                    title: data.title
-                });
-                setYoutubeProgress("Upload complete!");
+                setUploadResult(data);
+                setUploadProgress("Upload complete!");
             } else {
-                setYoutubeResult({
+                setUploadResult({
                     success: false,
                     error: data.error || "Upload failed"
                 });
             }
         } catch (e: unknown) {
-            setYoutubeResult({
+            setUploadResult({
                 success: false,
                 error: e instanceof Error ? e.message : "Pipeline failed"
             });
         } finally {
-            setYoutubeUploading(false);
+            setUploading(false);
         }
     };
 
@@ -169,48 +174,111 @@ export function MetaAIDownloader() {
                 </form>
             </div>
 
-            {/* YouTube Re-Engineer Button */}
-            <div className="bg-[#1a1a24] border border-white/5 rounded-2xl p-4 mb-8">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-                            <Youtube className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <p className="text-white font-medium">Re-Engineer & Upload to YouTube</p>
-                            <p className="text-neutral-500 text-xs">Download, analyze, generate metadata, and upload in one click</p>
-                        </div>
+            {/* Re-Engineer & Upload Section */}
+            <div className="bg-[#1a1a24] border border-white/5 rounded-2xl p-6 mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                    <Sparkles className="w-6 h-6 text-orange-400" />
+                    <div>
+                        <p className="text-white font-medium">Re-Engineer & Upload to Social Media</p>
+                        <p className="text-neutral-500 text-xs">Download, analyze, generate metadata, and upload in one click</p>
                     </div>
-                    <button
-                        onClick={handleReEngineerToYoutube}
-                        disabled={youtubeUploading || !url}
-                        className="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {youtubeUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                        {youtubeUploading ? youtubeProgress : "Re-Engineer Now"}
-                    </button>
                 </div>
 
-                {/* YouTube Result */}
-                {youtubeResult && (
-                    <div className={`mt-4 p-4 rounded-xl ${youtubeResult.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-                        {youtubeResult.success ? (
-                            <div className="flex items-center gap-3">
-                                <CheckCircle className="w-5 h-5 text-green-400" />
-                                <div>
-                                    <p className="text-green-400 font-medium">Uploaded to YouTube!</p>
-                                    {youtubeResult.title && <p className="text-neutral-400 text-sm mt-1">{youtubeResult.title}</p>}
-                                    {youtubeResult.video_url && (
-                                        <a href={youtubeResult.video_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-sm hover:underline mt-1 block">
-                                            {youtubeResult.video_url}
-                                        </a>
+                {/* Platform Selection */}
+                <div className="flex flex-wrap gap-4 mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={uploadYoutube}
+                            onChange={(e) => setUploadYoutube(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500"
+                        />
+                        <Youtube className="w-5 h-5 text-red-500" />
+                        <span className="text-white text-sm">YouTube</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={uploadFacebook}
+                            onChange={(e) => setUploadFacebook(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
+                        />
+                        <Facebook className="w-5 h-5 text-blue-500" />
+                        <span className="text-white text-sm">Facebook</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={uploadInstagram}
+                            onChange={(e) => setUploadInstagram(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-pink-500 focus:ring-pink-500"
+                        />
+                        <Instagram className="w-5 h-5 text-pink-500" />
+                        <span className="text-white text-sm">Instagram</span>
+                    </label>
+                </div>
+
+                <button
+                    onClick={handleReEngineerAndUpload}
+                    disabled={uploading || !url || (!uploadYoutube && !uploadFacebook && !uploadInstagram)}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-red-600 via-blue-600 to-pink-600 hover:from-red-500 hover:via-blue-500 hover:to-pink-500 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                    {uploading ? uploadProgress : "Re-Engineer & Upload Now"}
+                </button>
+
+                {/* Upload Results */}
+                {uploadResult && (
+                    <div className="mt-4 space-y-2">
+                        {uploadResult.youtube && (
+                            <div className={`p-3 rounded-lg ${uploadResult.youtube.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                                <div className="flex items-center gap-2">
+                                    <Youtube className="w-4 h-4 text-red-500" />
+                                    {uploadResult.youtube.success ? (
+                                        <div>
+                                            <span className="text-green-400 text-sm">YouTube: Uploaded!</span>
+                                            {uploadResult.youtube.video_url && (
+                                                <a href={uploadResult.youtube.video_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-xs hover:underline ml-2">
+                                                    View
+                                                </a>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="text-red-400 text-sm">YouTube: {uploadResult.youtube.error}</span>
                                     )}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="flex items-center gap-3">
-                                <AlertCircle className="w-5 h-5 text-red-400" />
-                                <p className="text-red-400">{youtubeResult.error}</p>
+                        )}
+                        {uploadResult.facebook && (
+                            <div className={`p-3 rounded-lg ${uploadResult.facebook.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                                <div className="flex items-center gap-2">
+                                    <Facebook className="w-4 h-4 text-blue-500" />
+                                    {uploadResult.facebook.success ? (
+                                        <span className="text-green-400 text-sm">Facebook: Posted!</span>
+                                    ) : (
+                                        <span className="text-red-400 text-sm">Facebook: {uploadResult.facebook.error}</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {uploadResult.instagram && (
+                            <div className={`p-3 rounded-lg ${uploadResult.instagram.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                                <div className="flex items-center gap-2">
+                                    <Instagram className="w-4 h-4 text-pink-500" />
+                                    {uploadResult.instagram.success ? (
+                                        <span className="text-green-400 text-sm">Instagram: Posted!</span>
+                                    ) : (
+                                        <span className="text-red-400 text-sm">Instagram: {uploadResult.instagram.error}</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {uploadResult.error && !uploadResult.youtube && !uploadResult.facebook && !uploadResult.instagram && (
+                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                                <div className="flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 text-red-400" />
+                                    <span className="text-red-400 text-sm">{uploadResult.error}</span>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -235,11 +303,11 @@ export function MetaAIDownloader() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-red-200"
+                        className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-red-200 mb-8"
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <AlertCircle className="w-5 h-5 text-red-400" />
-                            <span className="font-semibold">Download Failed</span>
+                            <span className="font-semibold">Error</span>
                         </div>
                         <p className="text-sm opacity-80">{error}</p>
                     </motion.div>
@@ -249,7 +317,7 @@ export function MetaAIDownloader() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border border-emerald-500/20 rounded-2xl overflow-hidden"
+                        className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border border-emerald-500/20 rounded-2xl overflow-hidden mb-8"
                     >
                         <div className="p-8 flex flex-col md:flex-row items-center gap-8">
                             <div className="w-full md:w-64 aspect-video bg-black/40 rounded-xl flex items-center justify-center border border-white/5 relative overflow-hidden">
@@ -275,14 +343,6 @@ export function MetaAIDownloader() {
                                     {result.file_size && (
                                         <p className="text-neutral-500 text-xs">Size: {(result.file_size / 1024 / 1024).toFixed(2)} MB</p>
                                     )}
-                                    {result.frame_count && (
-                                        <p className="text-neutral-500 text-xs">Frames: {result.frame_count}</p>
-                                    )}
-                                    {result.audio && (
-                                        <p className="text-purple-400 text-xs flex items-center gap-1">
-                                            <Music className="w-3 h-3" /> Audio captured ({(result.audio.size / 1024).toFixed(0)} KB)
-                                        </p>
-                                    )}
                                     {result.prompt && (
                                         <div className="mt-3 p-3 bg-black/30 rounded-lg border border-white/5">
                                             <p className="text-yellow-400 text-xs flex items-center gap-1 mb-1">
@@ -291,16 +351,11 @@ export function MetaAIDownloader() {
                                             <p className="text-neutral-300 text-xs line-clamp-3">{result.prompt}</p>
                                         </div>
                                     )}
-                                    {result.error && (
-                                        <p className="text-yellow-400 text-xs">{result.error}</p>
-                                    )}
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-4 justify-center md:justify-start">
-                                    <span className="text-xs text-neutral-500">
-                                        Saved to: {result.output_folder || "output/meta_ai_downloads/"}
-                                    </span>
-                                </div>
+                                <span className="text-xs text-neutral-500">
+                                    Saved to: {result.output_folder || "output/meta_ai_downloads/"}
+                                </span>
                             </div>
                         </div>
                     </motion.div>
@@ -308,11 +363,11 @@ export function MetaAIDownloader() {
             </AnimatePresence>
 
             {/* Instructions */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
                     { icon: Bot, title: "Find Content", desc: "Go to Meta AI and find a video or animation you like." },
                     { icon: Download, title: "Paste URL", desc: "Copy the post URL from your browser and paste it here." },
-                    { icon: Film, title: "Auto Convert", desc: "Animations are automatically converted to MP4 video." }
+                    { icon: Film, title: "Auto Upload", desc: "Select platforms and upload to YouTube, Facebook & Instagram." }
                 ].map((item, i) => (
                     <div key={i} className="p-6 rounded-2xl bg-[#0f0f16] border border-white/5 text-center">
                         <item.icon className="w-8 h-8 text-neutral-600 mx-auto mb-4" />
@@ -324,4 +379,3 @@ export function MetaAIDownloader() {
         </div>
     );
 }
-

@@ -418,6 +418,8 @@ def post_photo_to_facebook(image_path: str, message: str) -> Dict:
             "error": str(e)
         }
 
+
+def get_page_stats() -> Dict:
     """Get Facebook Page statistics."""
     PAGE_ID, PAGE_ACCESS_TOKEN = get_fb_credentials()
     
@@ -509,3 +511,102 @@ def get_recent_posts(limit: int = 5) -> List[Dict]:
 def get_topic_suggestions(niche: str = "general") -> List[str]:
     """Get topic suggestions for a given niche."""
     return TOPIC_SUGGESTIONS.get(niche, TOPIC_SUGGESTIONS.get("tech", []))
+
+
+@retry_with_backoff(max_retries=3)
+def post_video_to_facebook(video_path: str, message: str, title: str = None) -> Dict:
+    """
+    Post a video (Reel) to Facebook Page.
+    
+    Args:
+        video_path: Path to the video file
+        message: Caption/description for the video
+        title: Optional title for the video
+    
+    Returns:
+        Dict with 'success', 'post_id', 'error' keys
+    """
+    PAGE_ID, PAGE_ACCESS_TOKEN = get_fb_credentials()
+    
+    if not PAGE_ID or not PAGE_ACCESS_TOKEN:
+        return {
+            "success": False, 
+            "error": "Facebook credentials not configured"
+        }
+
+    # Verify file exists
+    if not os.path.exists(video_path):
+        return {
+            "success": False, 
+            "error": f"Video file not found: {video_path}"
+        }
+
+    try:
+        # Exchange Token for Page Token
+        token_url = f"https://graph.facebook.com/v20.0/{PAGE_ID}?fields=access_token&access_token={PAGE_ACCESS_TOKEN}"
+        token_res = requests.get(token_url, timeout=10)
+        if token_res.status_code == 200 and "access_token" in token_res.json():
+            page_token = token_res.json()["access_token"]
+            logger.info("Got Page Token for video upload")
+        else:
+            page_token = PAGE_ACCESS_TOKEN
+            logger.warning("Using User Token for video upload")
+        
+        # Use /videos endpoint for video uploads
+        url = f"https://graph.facebook.com/v20.0/{PAGE_ID}/videos"
+        
+        # Get file size for logging
+        file_size = os.path.getsize(video_path)
+        logger.info(f"Uploading video: {video_path} ({file_size / 1024 / 1024:.2f} MB)")
+        
+        # Upload using multipart/form-data
+        with open(video_path, "rb") as video_file:
+            payload = {
+                "description": message,
+                "access_token": page_token
+            }
+            if title:
+                payload["title"] = title
+            
+            files = {
+                "source": (os.path.basename(video_path), video_file, "video/mp4")
+            }
+            
+            response = requests.post(url, data=payload, files=files, timeout=300)  # 5 min timeout for large videos
+            
+            logger.info(f"Facebook video upload response: {response.status_code}")
+            
+            if response.status_code == 200:
+                post_data = response.json()
+                video_id = post_data.get('id')
+                
+                logger.info(f"Video published to Facebook: {video_id}")
+                
+                return {
+                    "success": True,
+                    "post_id": video_id,
+                    "video_id": video_id,
+                    "post_url": f"https://facebook.com/{video_id}",
+                    "error": None
+                }
+            else:
+                error_data = response.json()
+                error_msg = error_data.get("error", {}).get("message", response.text)
+                logger.error(f"Facebook video upload failed: {error_msg}")
+                return {
+                    "success": False,
+                    "error": f"Facebook API Error: {error_msg}"
+                }
+
+    except requests.exceptions.Timeout:
+        logger.error("Video upload timed out")
+        return {
+            "success": False,
+            "error": "Upload timed out - video may be too large"
+        }
+    except Exception as e:
+        logger.error(f"Video upload failed: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }

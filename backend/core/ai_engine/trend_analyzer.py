@@ -1,5 +1,6 @@
 """
 AI-powered trend analysis and content suggestions
+Uses Perplexity as PRIMARY, OpenAI as FALLBACK
 """
 import os
 import logging
@@ -8,13 +9,37 @@ import requests
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from openai import OpenAI
+from dotenv import load_dotenv
 from backend.utils.error_handler import retry_with_backoff, handle_api_error
 from backend.utils.rate_limiter import rate_limit
 from backend.utils.cache_manager import cached
 from backend.config.settings import settings
 
+load_dotenv("config.env")
 logger = logging.getLogger(__name__)
-client = OpenAI(api_key=settings.openai_api_key)
+
+# Perplexity (PRIMARY)
+PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
+PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar-pro")
+
+# OpenAI (FALLBACK)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+
+def get_ai_client():
+    """Get AI client - Perplexity first, OpenAI fallback."""
+    if PERPLEXITY_API_KEY:
+        return OpenAI(
+            base_url="https://api.perplexity.ai",
+            api_key=PERPLEXITY_API_KEY,
+            timeout=30.0
+        ), PERPLEXITY_MODEL, "perplexity"
+    elif OPENAI_API_KEY:
+        return OpenAI(api_key=OPENAI_API_KEY, timeout=30.0), "gpt-4o-mini", "openai"
+    return None, None, None
+
+
+client, model, provider = get_ai_client()
 
 class TrendAnalyzer:
     """Analyze trends and suggest viral content opportunities."""
@@ -222,7 +247,7 @@ class TrendAnalyzer:
         
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model,
                 messages=[
                     {"role": "system", "content": "You are a viral content trend analyst. Return only valid JSON."},
                     {"role": "user", "content": analysis_prompt}

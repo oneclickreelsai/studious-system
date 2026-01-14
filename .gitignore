@@ -86,3 +86,7 @@ meta_downloader.log
 *.bak
 *.swp
 *~
+
+# Duplicate Dockerfiles
+Dockerfile.backend
+Dockerfile.frontend

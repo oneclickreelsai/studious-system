@@ -6,6 +6,7 @@ import { InstagramReelUpload } from "./components/InstagramReelUpload";
 import { MetaAIDownloader } from "./components/MetaAIDownloader";
 import { YouTubeDownloaderPage } from "./pages/YouTubeDownloaderPage";
 import { VideoUploadPage } from "./pages/VideoUploadPage";
+import { BatchUploadPage } from "./pages/BatchUploadPage";
 import { AudioStudioPage } from "./pages/AudioStudioPage";
 import { ContentPlanPage } from "./pages/ContentPlanPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -66,6 +67,8 @@ export default function App() {
         return <YouTubeDownloaderPage />;
       case "upload":
         return <VideoUploadPage />;
+      case "batch-upload":
+        return <BatchUploadPage />;
       case "fb-reel":
         return <FacebookReelUpload />;
       case "instagram-upload":

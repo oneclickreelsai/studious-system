@@ -13,7 +13,7 @@ export function BatchMode() {
         setLoading(true);
         setStatus("Initiating...");
         try {
-            const res = await fetch("http://localhost:8002/api/batch-generate", {
+            const res = await fetch("http://localhost:8000/api/batch-generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ count, niche, upload_youtube: true }),

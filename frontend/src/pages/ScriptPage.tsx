@@ -32,7 +32,7 @@ export function ScriptPage() {
     const [caption, setCaption] = useState("");
 
     useEffect(() => {
-        fetch("http://localhost:8002/api/tts/voices")
+        fetch("http://localhost:8000/api/tts/voices")
             .then(res => res.json())
             .then(data => {
                 if (data.voices) setVoices(data.voices);
@@ -46,7 +46,7 @@ export function ScriptPage() {
         setPreviewAudio(null);
 
         try {
-            const res = await fetch("http://localhost:8002/api/tts/generate", {
+            const res = await fetch("http://localhost:8000/api/tts/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -57,7 +57,7 @@ export function ScriptPage() {
             });
             const data = await res.json();
             if (data.success) {
-                setPreviewAudio(`http://localhost:8002${data.url}`);
+                setPreviewAudio(`http://localhost:8000${data.url}`);
             }
         } catch (e) {
             console.error(e);
@@ -83,7 +83,7 @@ export function ScriptPage() {
         setResultPath(null);
 
         try {
-            const res = await fetch("http://localhost:8002/api/video/generate-from-script", {
+            const res = await fetch("http://localhost:8000/api/video/generate-from-script", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -96,7 +96,7 @@ export function ScriptPage() {
 
             const data = await res.json();
             if (data.success) {
-                setResultVideo(`http://localhost:8002${data.video_url}`);
+                setResultVideo(`http://localhost:8000${data.video_url}`);
                 setResultPath(data.video_path);
                 setCaption(`${script.substring(0, 100)}... #AI #Reels`);
             } else {
@@ -117,7 +117,7 @@ export function ScriptPage() {
         setSuccessMsg(null);
 
         try {
-            const res = await fetch("http://localhost:8002/api/social/upload", {
+            const res = await fetch("http://localhost:8000/api/social/upload", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

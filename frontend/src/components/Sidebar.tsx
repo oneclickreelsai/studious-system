@@ -21,7 +21,8 @@ import {
     Calendar,
     Activity,
     FolderOpen,
-    Cloud
+    Cloud,
+    Upload
 } from "lucide-react";
 import clsx from "clsx";
 import logo from "../assets/logo.png";
@@ -43,6 +44,7 @@ export function Sidebar({ activeView, setActiveView, isOpen, setIsOpen, onLogout
         { id: "script", label: "Script Studio", icon: FileText },
         { id: "news", label: "Newsroom", icon: Newspaper },
         { id: "upload", label: "Upload Video", icon: Share2 },
+        { id: "batch-upload", label: "Batch Upload", icon: Upload },
         { id: "audio-studio", label: "Audio Studio", icon: Music },
         { id: "content-plan", label: "Content Plan", icon: Calendar },
         { id: "analytics", label: "Analytics", icon: BarChart3 },

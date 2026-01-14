@@ -20,7 +20,7 @@ export function ContentPlanPage() {
     const fetchPlan = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8002/api/content-plan?days=${days}`);
+            const res = await fetch(`http://localhost:8000/api/content-plan?days=${days}`);
             const data = await res.json();
             if (data.success) {
                 setPlan(data.plan);
